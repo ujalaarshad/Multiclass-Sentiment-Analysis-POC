@@ -22,7 +22,7 @@ allowed_categories = [
 
 llm = ChatOpenAI(
     model="gpt-4",
-    temperature=0.4,
+    temperature=0.7,
     max_retries=2,
     api_key=OPENAI_API_KEY
 )
@@ -62,7 +62,7 @@ prompt_template = ChatPromptTemplate.from_template(
     - DO NOT OVERLAP THE CONTEXT WITH THE TRANSLATION OF THE COMMENT , ITS JUST GIVEN FOR SCORE RELEVANCE ANALYSIS
     - Translate the comment into English, preserving cultural nuances.
     - DO NOT ADD ANY OTHER CATEGORY OTHER THAN CATEGORIES PRESENT IN THE METADATA AND CONTEXT
-
+    - ANALYZE CLOSELY THE METADATA AND CATEGORIES PRESENT IN THE METADATA AND CONTEXT
     **Format Instructions:** 
     {format_instructions}
     
