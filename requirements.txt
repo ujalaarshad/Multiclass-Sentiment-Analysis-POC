@@ -1,0 +1,14 @@
+langchain
+langchain-openai
+langchain-google-genai
+pinecone
+langchain-pinecone
+uvicorn
+streamlit 
+python-dotenv
+pandas 
+numpy
+deepeval
+openpyxl
+rouge_score
+nltk
