@@ -22,7 +22,7 @@ allowed_categories = [
 
 llm = ChatOpenAI(
     model="gpt-4",
-    temperature=0.7,
+    temperature=0.1,
     max_retries=2,
     api_key=OPENAI_API_KEY
 )
