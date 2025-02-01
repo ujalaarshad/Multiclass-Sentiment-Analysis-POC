@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, validator
 from vector_store import vectorstore
 from config import GOOGLE_API_KEY, OPENAI_API_KEY
 from typing import List
-
+from langchain_google_genai import ChatGoogleGenerativeAI
 # Allowed Categories
 allowed_categories = [
     "Research labs", "Schedule exams", "Receive orientation to prepare for the exam",
@@ -20,13 +20,19 @@ allowed_categories = [
     "Making the payment", "Receiving the results of the exam"
 ]
 
-llm = ChatOpenAI(
-    model="gpt-4",
-    temperature=0.1,
-    max_retries=2,
-    api_key=OPENAI_API_KEY
+# llm = ChatOpenAI(
+#     model="gpt-4",
+#     temperature=0.4,
+#     max_retries=2,
+#     api_key=OPENAI_API_KEY
+# )
+llm = ChatGoogleGenerativeAI(
+    # model="gemini-2.0-flash-exp",
+    model = 'gemini-1.5-pro',
+    google_api_key=GOOGLE_API_KEY,
+    temperature=0.8,
+    max_retries=2
 )
-
 class CategoryPrediction(BaseModel):
     categories: List[str] = Field(description="List of Predicted categories for the comments")
     scores: List[float] = Field(description="List of Sentiment scores between 0-10 for the comments")
@@ -43,28 +49,29 @@ retry_parser = RetryWithErrorOutputParser.from_llm(parser=parser, llm=llm, max_r
 
 prompt_template = ChatPromptTemplate.from_template(
     """
-    You are a specialized AI that analyzes Brazilian Portuguese comments along three dimensions: 
+    You are a specialized AI that analyzes Brazilian Portuguese comments along three dimensions and give scoring along the categories: 
     1. Service Category Prediction  
     2. Integer Sentiment Scoring (0-10)  
     3. Cultural-Aware Translation
+    4. Analyze the relevant metadata and context
+    
+    Context & Metadata:
+        {context}
 
-    ## ANALYSIS CONTEXT
-    **Context & Metadata:**
-    {context}
-
-    ## INPUT COMMENT
-    **Comment:**
+    Input Comment
     "{input_comment}"
 
-    ## PROCESSING
+    
+
+    PROCESSING
     - Detect all applicable service categories by using the metadata and the context.
-    - Provide a separate integer sentiment score (0-10) per category by analyzing the metadata of similar context and the english translation as well.
+    - Provide a separate integer sentiment score (0-10) per category by analyzing the metadata of similar context.
     - DO NOT OVERLAP THE CONTEXT WITH THE TRANSLATION OF THE COMMENT , ITS JUST GIVEN FOR SCORE RELEVANCE ANALYSIS
     - Translate the comment into English, preserving cultural nuances.
     - DO NOT ADD ANY OTHER CATEGORY OTHER THAN CATEGORIES PRESENT IN THE METADATA AND CONTEXT
-    - ANALYZE CLOSELY THE METADATA AND CATEGORIES PRESENT CONTEXT FOR SCORING
-    - ONLY GIVE OUTPUT IN THE FORMAT DESCRIBED BELOW
-    **Format Instructions:** 
+    - You can convert the context in english as well to understand the categories and the score metadata
+    
+    Format Instructions:
     {format_instructions}
     
     EXAMPLE OUTPUT: 
@@ -79,7 +86,7 @@ def predict_category_score_translation(comment: str) -> tuple:
     docs = vectorstore.similarity_search(comment, k=5)
     contexts = "\n".join([doc.page_content for doc in docs])
     metadata_list = [doc.metadata for doc in docs]
-    context_str = f"CONTEXT:\n{contexts}\n\nMETADATA:\n{str(metadata_list)}\n\n"
+    context_str = f"CONTEXT:\n{contexts}\n\nMETADATA:\n{metadata_list}\n\n"
     formatted_prompt = prompt_template.format_messages(
         context=context_str,
         input_comment=comment,
@@ -87,6 +94,8 @@ def predict_category_score_translation(comment: str) -> tuple:
     )
     try:
         response = llm.invoke(formatted_prompt)
+        # print(response)
+        # print(response.content)
         if isinstance(response, list):
             content = response[0].content if hasattr(response[0], 'content') else str(response[0])
         else:
